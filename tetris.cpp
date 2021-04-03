@@ -26,9 +26,13 @@ bool Tetris::checkWrld(std::array<Point, constant::SQUARE> &_a) {
 };
 
 bool Tetris::checkGameOver() {
-    for (int i = 0; i < constant::W; ++i) {
-        if (worldMap[1][i])
-            return true;
+    if (isGameOver)  {
+        return true;
+    } else {
+        for (int i = 0; i < constant::W; ++i) {
+            if (worldMap[1][i])
+                return true;
+        }
     }
     return false;
 }
@@ -53,10 +57,29 @@ void Tetris::checkLine() {
 
 void Tetris::setScore(int _lc) { // pass count of lines
     oldScore = curScore;
-    if (_lc > 1)
-        curScore += (_lc + (multiplier * _lc)) * constant::LINE_SCORE;
-    else if (_lc == 1)
-        curScore += constant::LINE_SCORE;
+    switch (_lc) {
+        case 1: {
+            curScore += constant::LINE_SCORE;
+        }
+            break;
+
+        case 2: {
+            curScore += 3 * constant::LINE_SCORE;
+        }
+            break;
+
+        case 3: {
+            curScore += 7 * constant::LINE_SCORE;
+        }
+            break;
+
+        case 4: {
+            curScore += 15 * constant::LINE_SCORE;
+        }
+
+        default:
+            break;
+    }
     linesCounter += _lc;
     curScore > topScore ? topScore = curScore : topScore;
 }
@@ -75,6 +98,10 @@ unsigned int Tetris::getLevel() const {
 
 unsigned int Tetris::getLines() const {
     return linesCounter;
+}
+
+unsigned int Tetris::getTetrStat(unsigned int _index) const {
+    return tetrCounter[_index];
 }
 
 void Tetris::setDelay(float _d) {
@@ -103,6 +130,30 @@ void Tetris::setDy(int _dy) {
 
 void Tetris::setRotate(bool _r) {
     rotate = _r;
+}
+
+unsigned int Tetris::getCurScoreByDown() const {
+    return curScore;
+}
+
+void Tetris::incCurScoreByDown(unsigned int _score) {
+    curScore += _score;
+}
+
+void Tetris::incBonusScore(unsigned int _bonus) {
+    bonusScrInc += _bonus;
+}
+
+unsigned int Tetris::getBonusScore() const {
+    return bonusScrInc;
+}
+
+void Tetris::setBonusScore(unsigned int _sc) {
+    bonusScrInc = _sc;
+}
+
+void Tetris::setGameOver(bool cond_) {
+    isGameOver = cond_;
 }
 
 void Tetris::firstMove() {
@@ -144,13 +195,16 @@ void Tetris::Generate() {
     std::uniform_int_distribution<int> typeDist(0, 6);
     //std::uniform_int_distribution<int> colorDist(0, 6);
     curType = typeDist(mt);
+    //++tetrCounter[curType];
     //curColor = colorDist(mt);
 }
 
 void Tetris::LevelUp() {
     if (curScore / 1000 > oldScore / 1000) {
-        delay -= 0.05f;
-        ++curLevel;
+        for (int i = 0; i < (curScore / 1000 - oldScore / 1000); ++i) {
+            delay -= 0.05f;
+            ++curLevel;
+        }
         generateColor();
     }
 }
@@ -180,13 +234,13 @@ void Tetris::Init() {
 
     // not clear code
     if (timer > delay) {
-        //++tetramino_counter[n];
+        //++tetrCounter[curType];
         for (int i = 0; i < constant::SQUARE; ++i) {
             oldCrd[i] = curCrd[i];
             curCrd[i].y += 1;
         }
         if (!checkWrld(curCrd)) {
-            //++tetramino_counter[n];
+            ++tetrCounter[curType];
             for (auto & i : oldCrd)
                 worldMap[i.y][i.x] = curColor;
             //generateColor();
@@ -209,4 +263,34 @@ void Tetris::Init() {
     rotate = false;
     delay = 0.3;
 
+}
+
+void Tetris::Restart() {
+    // restart game loop
+    std::for_each(worldMap.begin(), worldMap.end(), [](std::array<int, constant::W>& el) {
+        std::for_each(el.begin(), el.end(), [](int& e) {
+            e = 0;
+        });
+    });
+    std::for_each(tetrCounter.begin(), tetrCounter.end(), [](int& el) {
+        el = 0;
+    });
+    dx = 0;
+    dy = 0;
+    if (curScore == 0)
+        topScore;
+    else
+        topScore = curScore;
+    curScore = 0;
+    oldScore = 0;
+    linesCounter = 0;
+    curLevel = 1;
+    curType = 1;
+    curColor = 1;
+    timer = 0;
+    delay = 0.5f;
+    duration = 0;
+    rotate = false;
+    isFirst = true;
+    isGameOver = false;
 }
